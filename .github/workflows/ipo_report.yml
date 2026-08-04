@@ -1,0 +1,57 @@
+name: 新股自动分析报告
+
+# 触发：每周日 + 手动
+on:
+  schedule:
+    # GitHub Actions 的 cron 为 UTC 时间。
+    # 周日 01:00 UTC = 北京时间 周日 09:00（A股休市，数据完整稳定）
+    - cron: '0 1 * * 0'
+  workflow_dispatch: {}   # 允许在 Actions 页面手动点 "Run workflow" 测试
+
+# 允许 workflow 把刷新后的 IPO 缓存(csv) 提交回仓库，避免缓存过期
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 配置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: pip install --upgrade pip akshare pandas numpy
+
+      - name: 生成新股分析报告
+        run: python ipo_auto_report.py --n 10 --out ipo_report.html
+
+      - name: 回写刷新后的 IPO 缓存
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ipo_universe.csv || true
+          git commit -m "chore: refresh ipo universe cache" || echo "no cache change"
+          git push || echo "push skipped (no permission / nothing to push)"
+        continue-on-error: true
+
+      - name: 发送报告邮件（QQ 邮箱 SMTP）
+        env:
+          QQ_EMAIL:     ${{ secrets.QQ_EMAIL }}
+          QQ_AUTH_CODE: ${{ secrets.QQ_AUTH_CODE }}
+          RECIPIENT:    ${{ secrets.RECIPIENT }}
+        run: python send_email.py
+
+      - name: 上传报告为构建产物（备用下载）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipo-report
+          path: ipo_report.html
+          retention-days: 30
