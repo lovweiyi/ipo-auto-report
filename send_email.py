@@ -3,13 +3,11 @@
 """
 send_email.py — 通过 QQ 邮箱 SMTP 发送 ipo_report.html 附件
 
-依赖环境变量（由 GitHub Actions Secrets 注入，不在代码里写明文）：
-  QQ_EMAIL      发件人 QQ 邮箱，例如 790192539@qq.com
-  QQ_AUTH_CODE  QQ 邮箱“授权码”（不是登录密码）
-  RECIPIENT     收件人（可选，默认 = QQ_EMAIL，即发给自己）
-
-本地手动测试示例：
-  QQ_EMAIL=790192539@qq.com QQ_AUTH_CODE=xxxx python send_email.py
+凭据来源（按优先级）：
+  1. 环境变量 QQ_EMAIL / QQ_AUTH_CODE / RECIPIENT
+     （GitHub Actions 由 Secrets 注入；本地可在 shell 直接 export）
+  2. 本地 .env 文件（项目根目录，已被 .gitignore 排除，不会上传）
+  注意：授权码不是登录密码，是 QQ 邮箱“设置→账户→开启 SMTP”后生成的 16 位码。
 """
 import os
 import re
@@ -21,6 +19,19 @@ from email.mime.application import MIMEApplication
 
 REPORT = "ipo_report.html"
 SMTP_HOST, SMTP_PORT = "smtp.qq.com", 587
+
+
+def load_env_file(path=".env"):
+    """本地开发时从 .env 读取凭据；setdefault 不覆盖已有环境变量（兼容 GitHub Secrets）。"""
+    if not os.path.exists(path):
+        return
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
 
 
 def build_subject():
@@ -41,6 +52,7 @@ def build_subject():
 
 
 def main():
+    load_env_file()
     sender = os.environ.get("QQ_EMAIL")
     auth = os.environ.get("QQ_AUTH_CODE")
     recipient = (os.environ.get("RECIPIENT") or sender)
@@ -62,7 +74,7 @@ def main():
     body = (f"附件为 {today} 自动生成的新股分析报告：\n"
             f"· 模块A：近端 10 支新股「首日收盘买入、次日卖出」回测\n"
             f"· 模块B：本次上市新股画像（市值/行业市值/盈利增速/发行流通市值）\n\n"
-            f"本报告由 GitHub Actions 自动生成，仅供研究参考，不构成投资建议。")
+            f"本报告由自动流程生成，仅供研究参考，不构成投资建议。")
     msg.attach(MIMEText(body, "plain", "utf-8"))
 
     with open(REPORT, "rb") as f:
