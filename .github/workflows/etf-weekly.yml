@@ -1,0 +1,87 @@
+name: ETF 牛熊择时每周分析
+
+# 触发：每周日 + 手动
+on:
+  schedule:
+    # GitHub Actions 的 cron 为 UTC 时间。
+    # 周日 13:00 UTC = 北京时间 周日 21:00（A股收盘后，数据完整稳定）
+    - cron: '0 13 * * 0'
+  workflow_dispatch: {}   # Actions 页面手动 "Run workflow" 测试
+
+# 允许 workflow 把生成的报告提交回仓库
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 配置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装 Python 依赖
+        run: pip install --upgrade pip pandas numpy requests
+
+      - name: 计算本周目录名（周日）
+        id: date
+        run: echo "RUN_DATE=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+
+      - name: 市场观点生成（monthly_review）
+        env:
+          # CI 云端境外 IP 腾讯行情接口大概率不可达: 离线模式直读本地产存, 秒级完成
+          ETF_OFFLINE: '1'
+          NODE_EXE: node
+          WESTOCK_JS: ${{ github.workspace }}/etf-bullbear/scripts/westock_data.js
+          ETF_HISTORY_DIR: ${{ github.workspace }}/etf-bullbear/data/etf_history
+          MACRO_CSV: ${{ github.workspace }}/etf-bullbear/data/macro_data.csv
+        run: python etf-bullbear/scripts/monthly_review.py --output-dir etf-bullbear/${{ steps.date.outputs.RUN_DATE }}
+
+      - name: 五档回测（base/1/2/3/4）
+        env:
+          ETF_HISTORY_DIR: ${{ github.workspace }}/etf-bullbear/data/etf_history
+          MACRO_CSV: ${{ github.workspace }}/etf-bullbear/data/macro_data.csv
+        run: |
+          for lvl in base 1 2 3 4; do
+            python etf-bullbear/scripts/gem50_bullbear_v10.py --output-dir etf-bullbear/${{ steps.date.outputs.RUN_DATE }} $lvl
+          done
+
+      - name: 渲染仪表盘
+        env:
+          QB_REF: ${{ github.workspace }}/etf-bullbear/reference
+          MACRO_CSV: ${{ github.workspace }}/etf-bullbear/data/macro_data.csv
+        run: python etf-bullbear/scripts/render_v10_dashboard.py --output-dir etf-bullbear/${{ steps.date.outputs.RUN_DATE }}
+
+      - name: 生成 README
+        run: python etf-bullbear/scripts/make_readme.py --output-dir etf-bullbear/${{ steps.date.outputs.RUN_DATE }}
+
+      - name: 提交结果回仓库
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add etf-bullbear/${{ steps.date.outputs.RUN_DATE }}
+          git commit -m "chore: ETF weekly report ${{ steps.date.outputs.RUN_DATE }}" || echo "no changes"
+          git push || echo "push skipped"
+
+      - name: 发送 QQ 邮件（SMTP）
+        env:
+          QQ_EMAIL: ${{ secrets.QQ_EMAIL }}
+          QQ_AUTH_CODE: ${{ secrets.QQ_AUTH_CODE }}
+          RECIPIENT: ${{ secrets.RECIPIENT }}
+        run: python etf-bullbear/send_email_etf.py --folder etf-bullbear/${{ steps.date.outputs.RUN_DATE }}
+
+      - name: 上传仪表盘为构建产物（备用下载）
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: etf-dashboard-${{ steps.date.outputs.RUN_DATE }}
+          path: etf-bullbear/${{ steps.date.outputs.RUN_DATE }}/index.html
+          retention-days: 30
