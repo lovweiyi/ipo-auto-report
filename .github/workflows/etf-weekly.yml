@@ -29,15 +29,21 @@ jobs:
           python-version: '3.11'
 
       - name: 安装 Python 依赖
-        run: pip install --upgrade pip pandas numpy requests
+        run: pip install --upgrade pip pandas numpy requests akshare
 
       - name: 计算本周目录名（周日）
         id: date
         run: echo "RUN_DATE=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
 
+      - name: 云端刷新行情（akshare，best-effort）
+        # akshare 直连东方财富，与仓库 IPO 工作流同源；失败则保留静态缓存，不阻断流程
+        env:
+          ETF_HISTORY_DIR: ${{ github.workspace }}/etf-bullbear/data/etf_history
+        run: python etf-bullbear/scripts/refresh_cloud.py
+
       - name: 市场观点生成（monthly_review）
         env:
-          # CI 云端境外 IP 腾讯行情接口大概率不可达: 离线模式直读本地产存, 秒级完成
+          # 离线模式：直读上方刷新（或静态）的本地缓存，秒级完成，不依赖腾讯接口
           ETF_OFFLINE: '1'
           NODE_EXE: node
           WESTOCK_JS: ${{ github.workspace }}/etf-bullbear/scripts/westock_data.js
@@ -68,6 +74,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add etf-bullbear/${{ steps.date.outputs.RUN_DATE }}
+          git add etf-bullbear/data/etf_history   # 回写刷新后的行情缓存
           git commit -m "chore: ETF weekly report ${{ steps.date.outputs.RUN_DATE }}" || echo "no changes"
           git push || echo "push skipped"
 
