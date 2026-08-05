@@ -23,30 +23,30 @@
       },
       "sh510050": {
         "source": "local-history",
-        "rows": 3058,
+        "rows": 3060,
         "first": "2014-01-02",
-        "last": "2026-07-31"
+        "last": "2026-08-04"
       },
       "sh510300": {
         "source": "local-history",
-        "rows": 3058,
+        "rows": 3060,
         "first": "2014-01-02",
-        "last": "2026-07-31"
+        "last": "2026-08-04"
       },
       "sh510880": {
         "source": "local-history",
-        "rows": 3058,
+        "rows": 3060,
         "first": "2014-01-02",
-        "last": "2026-07-31"
+        "last": "2026-08-04"
       }
     },
-    "generated_at": "2026-08-05T01:05:16+00:00"
+    "generated_at": "2026-08-05T01:11:55+00:00"
   },
   "summary": {
     "total_return_pct": 67.60651502428065,
     "annual_return_pct": 4.658986327928782,
     "max_drawdown_pct": 63.19538227971114,
-    "sharpe": 0.3221367172768982,
+    "sharpe": 0.32213684097484163,
     "win_rate_pct": 42.0,
     "total_trades": 50
   },
@@ -126,7 +126,7 @@
   },
   "daily_snapshot": {
     "as_of": "2026-07-31",
-    "generated_at": "2026-08-05 01:05:09",
+    "generated_at": "2026-08-05 01:11:46",
     "fused_regime": "sideways",
     "regime_cn": "震荡市",
     "recommended_action": "防守 / 轻仓，现金或低波动避风港为主",
