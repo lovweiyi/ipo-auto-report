@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""云端行情刷新：用 akshare 拉取 5 只 ETF 全历史日线（前复权），覆盖写入本地缓存。
+"""云端行情刷新：多源拉取 5 只 ETF 全历史日线，覆盖写入本地缓存。
 
-GitHub Actions 上 akshare 可直连东方财富接口（与仓库 IPO 工作流同源）。
-- 输出列对齐本地缓存格式：date,open,close,high,low
-- best-effort：单只失败不影响其他；全部失败则保留既有静态缓存并正常退出（不让整条 run 崩）。
+数据源（按优先级）：
+  1) 新浪 fund_etf_hist_sina  —— 境外 runner 上通常比东方财富更不易被限流
+  2) 东方财富 fund_etf_hist_em(adjust=qfq) —— 兜底，与原始缓存语义一致
 
-用法: python refresh_cloud.py
-依赖环境变量 ETF_HISTORY_DIR（指向 etf_history 目录）。
+容错设计：
+  - 每只 ETF 先试主源、失败切兜底源
+  - 整批未全成功时，冷却 COOLDOWN 秒后重跑剩余标的（最多 BATCH_RETRY 轮）
+  - best-effort：最终仍有失败则保留既有静态缓存，不让整条 workflow 中断
+
+输出列对齐本地缓存格式：date,open,close,high,low
+用法: python refresh_cloud.py  （依赖环境变量 ETF_HISTORY_DIR）
 """
 import os
 import sys
-import json
 import time
 import datetime as dt
 
-# ETF 代码映射：本地缓存文件名 -> akshare 6位代码
+# 本地缓存文件名 -> akshare 6位代码
 ETF_MAP = {
     "sh510050": "510050",  # 上证50ETF
     "sh510300": "510300",  # 沪深300ETF
@@ -24,29 +28,46 @@ ETF_MAP = {
     "sz159949": "159949",  # 创业板50ETF
 }
 
-RETRY = 4          # 单标的重试次数
-BACKOFF = [3, 6, 12]  # 重试间隔（秒）
-BETWEEN = 3        # 标的之间间隔（秒），避免东方财富限流断连
+BATCH_RETRY = 3     # 整批重试轮数
+COOLDOWN = 45       # 批次间冷却（秒）
+BETWEEN = 2         # 标的之间间隔（秒）
 
 
-def fetch_one(ak, code, start, end):
-    """带重试的拉取；全部失败抛异常。"""
-    last = None
-    for attempt in range(RETRY):
-        try:
-            df = ak.fund_etf_hist_em(symbol=code, period="daily",
-                                     start_date=start, end_date=end, adjust="qfq")
-            if df is None or len(df) == 0:
-                raise RuntimeError("空数据")
-            return df
-        except Exception as e:
-            last = e
-            if attempt < RETRY - 1:
-                time.sleep(BACKOFF[min(attempt, len(BACKOFF) - 1)])
-    raise last
+def _norm(df, source):
+    """统一成 date,open,close,high,low（顺序与本地缓存一致）。"""
+    if source == "sina":
+        cols = {"date": "date", "open": "open", "close": "close",
+                "high": "high", "low": "low"}
+    else:  # eastmoney
+        cols = {"日期": "date", "开盘": "open", "收盘": "close",
+                "最高": "high", "最低": "low"}
+    out = df.rename(columns=cols)[list(cols.values())].copy()
+    out["date"] = pd.to_datetime(out["date"]).dt.strftime("%Y-%m-%d")
+    for c in ("open", "close", "high", "low"):
+        out[c] = out[c].astype(float).round(4)
+    return out.sort_values("date").reset_index(drop=True)
+
+
+def fetch_one(ak, code, end):
+    """主源新浪 -> 兜底东财 qfq；全部失败抛异常。"""
+    # 1) 新浪
+    try:
+        df = ak.fund_etf_hist_sina(symbol=code)
+        if df is not None and len(df) > 0:
+            return _norm(df, "sina"), "sina"
+    except Exception as e:
+        pass
+    # 2) 东方财富 qfq
+    df = ak.fund_etf_hist_em(symbol=code, period="daily",
+                             start_date="20100101", end_date=end, adjust="qfq")
+    if df is None or len(df) == 0:
+        raise RuntimeError("空数据")
+    return _norm(df, "em"), "em"
 
 
 def main():
+    global pd
+    import pandas as pd
     etf_dir = os.environ.get("ETF_HISTORY_DIR")
     if not etf_dir:
         print("[refresh] 未设置 ETF_HISTORY_DIR，跳过")
@@ -60,33 +81,32 @@ def main():
         return
 
     end = dt.date.today().strftime("%Y%m%d")
-    start = "20100101"
-    ok, fail = 0, 0
-    for fname, code in ETF_MAP.items():
-        try:
-            df = fetch_one(ak, code, start, end)
-            # 列映射：日期/开盘/收盘/最高/最低
-            out = df.rename(columns={
-                "日期": "date", "开盘": "open", "收盘": "close",
-                "最高": "high", "最低": "low",
-            })[["date", "open", "close", "high", "low"]].copy()
-            out["date"] = out["date"].astype(str)
-            for c in ("open", "close", "high", "low"):
-                out[c] = out[c].astype(float).round(4)
-            out = out.sort_values("date").reset_index(drop=True)
-            path = os.path.join(etf_dir, f"{fname}.csv")
-            out.to_csv(path, index=False)
-            print(f"[refresh] {fname} ({code}) 写入 {len(out)} 行, 末日={out['date'].iloc[-1]}")
-            ok += 1
-        except Exception as e:
-            print(f"[refresh] {fname} ({code}) 失败: {type(e).__name__}: {e}")
-            fail += 1
-        time.sleep(BETWEEN)  # 标的之间停顿，规避限流
+    remaining = list(ETF_MAP.items())
+    ok_total = 0
+    for batch in range(BATCH_RETRY):
+        failed = []
+        for fname, code in remaining:
+            try:
+                out, src = fetch_one(ak, code, end)
+                path = os.path.join(etf_dir, f"{fname}.csv")
+                out.to_csv(path, index=False)
+                print(f"[refresh] {fname} ({code}) [{src}] 写入 {len(out)} 行, 末日={out['date'].iloc[-1]}")
+                ok_total += 1
+            except Exception as e:
+                print(f"[refresh] {fname} ({code}) 失败: {type(e).__name__}: {e}")
+                failed.append((fname, code))
+            time.sleep(BETWEEN)
+        remaining = failed
+        if not remaining:
+            break
+        if batch < BATCH_RETRY - 1:
+            print(f"[refresh] 第{batch+1}轮剩余 {len(remaining)} 只，冷却 {COOLDOWN}s 后重试")
+            time.sleep(COOLDOWN)
 
-    print(f"[refresh] 完成：成功 {ok} / 失败 {fail}")
-    if ok == 0:
-        print("[refresh] 全部失败，保留既有静态缓存（best-effort）")
-    # 即使部分失败也正常退出，不让 workflow 中断
+    fail = len(remaining)
+    print(f"[refresh] 完成：成功 {ok_total} / 失败 {fail}")
+    if fail:
+        print(f"[refresh] 未刷新: {[f for f,_ in remaining]}（保留既有静态缓存，best-effort）")
 
 
 if __name__ == "__main__":
