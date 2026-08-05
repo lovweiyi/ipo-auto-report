@@ -11,9 +11,9 @@
     "data_sources": {
       "sz159915": {
         "source": "local-history",
-        "rows": 3057,
+        "rows": 3059,
         "first": "2014-01-02",
-        "last": "2026-07-31"
+        "last": "2026-08-04"
       },
       "sz159949": {
         "source": "local-history",
@@ -23,9 +23,9 @@
       },
       "sh510050": {
         "source": "local-history",
-        "rows": 3058,
+        "rows": 3060,
         "first": "2014-01-02",
-        "last": "2026-07-31"
+        "last": "2026-08-04"
       },
       "sh510300": {
         "source": "local-history",
@@ -35,18 +35,18 @@
       },
       "sh510880": {
         "source": "local-history",
-        "rows": 3058,
+        "rows": 3060,
         "first": "2014-01-02",
-        "last": "2026-07-31"
+        "last": "2026-08-04"
       }
     },
-    "generated_at": "2026-08-05T01:25:25+00:00"
+    "generated_at": "2026-08-05T01:35:44+00:00"
   },
   "summary": {
     "total_return_pct": 51.9441667310927,
-    "annual_return_pct": 3.7575541503006793,
+    "annual_return_pct": 3.7548777636760455,
     "max_drawdown_pct": 64.04210607294112,
-    "sharpe": 0.2941652920929418,
+    "sharpe": 0.2940624197772883,
     "win_rate_pct": 45.90163934426229,
     "total_trades": 61
   },
@@ -126,19 +126,19 @@
   },
   "daily_snapshot": {
     "as_of": "2026-08-05",
-    "generated_at": "2026-08-05 01:25:14",
+    "generated_at": "2026-08-05 01:35:33",
     "fused_regime": "sideways",
     "regime_cn": "震荡市",
     "recommended_action": "防守 / 轻仓，现金或低波动避风港为主",
     "leader_style": "红利",
     "gem": {
       "date": "2026-08-05",
-      "close": 1.61,
-      "ma200": 1.6472,
-      "slope_pct": 1.488,
-      "ret20_pct": -12.12,
-      "ret60_pct": -14.68,
-      "ann_vol_pct": 68.58,
+      "close": 1.639,
+      "ma200": 1.6474,
+      "slope_pct": 1.497,
+      "ret20_pct": -10.53,
+      "ret60_pct": -13.14,
+      "ann_vol_pct": 67.91,
       "above_ma200": false
     },
     "macro_score": 1,
