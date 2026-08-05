@@ -12,6 +12,7 @@ GitHub Actions 上 akshare 可直连东方财富接口（与仓库 IPO 工作流
 import os
 import sys
 import json
+import time
 import datetime as dt
 
 # ETF 代码映射：本地缓存文件名 -> akshare 6位代码
@@ -22,6 +23,27 @@ ETF_MAP = {
     "sz159915": "159915",  # 创业板ETF
     "sz159949": "159949",  # 创业板50ETF
 }
+
+RETRY = 4          # 单标的重试次数
+BACKOFF = [3, 6, 12]  # 重试间隔（秒）
+BETWEEN = 3        # 标的之间间隔（秒），避免东方财富限流断连
+
+
+def fetch_one(ak, code, start, end):
+    """带重试的拉取；全部失败抛异常。"""
+    last = None
+    for attempt in range(RETRY):
+        try:
+            df = ak.fund_etf_hist_em(symbol=code, period="daily",
+                                     start_date=start, end_date=end, adjust="qfq")
+            if df is None or len(df) == 0:
+                raise RuntimeError("空数据")
+            return df
+        except Exception as e:
+            last = e
+            if attempt < RETRY - 1:
+                time.sleep(BACKOFF[min(attempt, len(BACKOFF) - 1)])
+    raise last
 
 
 def main():
@@ -42,10 +64,7 @@ def main():
     ok, fail = 0, 0
     for fname, code in ETF_MAP.items():
         try:
-            df = ak.fund_etf_hist_em(symbol=code, period="daily",
-                                     start_date=start, end_date=end, adjust="qfq")
-            if df is None or len(df) == 0:
-                raise RuntimeError("空数据")
+            df = fetch_one(ak, code, start, end)
             # 列映射：日期/开盘/收盘/最高/最低
             out = df.rename(columns={
                 "日期": "date", "开盘": "open", "收盘": "close",
@@ -62,6 +81,7 @@ def main():
         except Exception as e:
             print(f"[refresh] {fname} ({code}) 失败: {type(e).__name__}: {e}")
             fail += 1
+        time.sleep(BETWEEN)  # 标的之间停顿，规避限流
 
     print(f"[refresh] 完成：成功 {ok} / 失败 {fail}")
     if ok == 0:
