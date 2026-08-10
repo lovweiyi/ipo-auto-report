@@ -79,6 +79,6 @@
 - 回测数据：`gem50_bullbear_v10_*_equity.csv`、`_*_trades.csv`、`_*_regime.csv`、`_*_regime_log.csv`、`_*_style_log.csv`
 - 五档指标：`gem50_bullbear_v10_*_summary.json`（含 `params` 固定阈值 + `daily_snapshot` 当日实测）
 - 月度研判：`monthly_review.json`
-- GitHub：`https://github.com/lovweiyi/ipo-auto-report/tree/main/etf-bullbear/2026-08-09`
+- GitHub：`https://github.com/lovweiyi/ipo-auto-report/tree/main/etf-bullbear/ETF牛熊择时_2026-08-09`
 
 > ⚠️ 以上内容由 AI 基于公开信息整理生成，仅供参考，不构成任何投资建议或个股推荐。投资有风险，决策需谨慎。
