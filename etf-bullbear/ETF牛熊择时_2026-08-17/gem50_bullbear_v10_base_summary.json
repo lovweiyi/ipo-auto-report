@@ -1,0 +1,155 @@
+{
+  "meta": {
+    "strategy_name": "风格轮动增强v10 (2014起+优化等级base: 基线(仅2014扩展))",
+    "symbol": "159949.SZ / 510300.SH / 510050.SH / 510880.SH / 159915.SZ",
+    "start": "2014-01-01",
+    "end": "2026-08-17",
+    "initial_cash": 1000000.0,
+    "window_start_value": 1000372.02,
+    "final_value": 2505026.83,
+    "market": "china_a",
+    "data_sources": {
+      "sz159915": {
+        "source": "local-history",
+        "rows": 3067,
+        "first": "2014-01-02",
+        "last": "2026-08-14"
+      },
+      "sz159949": {
+        "source": "local-history",
+        "rows": 2444,
+        "first": "2016-07-22",
+        "last": "2026-08-14"
+      },
+      "sh510050": {
+        "source": "local-history",
+        "rows": 3068,
+        "first": "2014-01-02",
+        "last": "2026-08-14"
+      },
+      "sh510300": {
+        "source": "local-history",
+        "rows": 3068,
+        "first": "2014-01-02",
+        "last": "2026-08-14"
+      },
+      "sh510880": {
+        "source": "local-history",
+        "rows": 3068,
+        "first": "2014-01-02",
+        "last": "2026-08-14"
+      }
+    },
+    "generated_at": "2026-08-17T09:12:44+08:00"
+  },
+  "summary": {
+    "total_return_pct": 150.40952564826836,
+    "annual_return_pct": 8.3996546435388,
+    "max_drawdown_pct": 65.3845041905676,
+    "sharpe": 0.46821051864717667,
+    "win_rate_pct": 43.859649122807014,
+    "total_trades": 57
+  },
+  "params": {
+    "回测设置": {
+      "initial_cash": 1000000,
+      "commission": 0.0003,
+      "lot_size": 100,
+      "data_limit": 5000,
+      "data_start": "2014-01-01",
+      "eval_start": "2014-01-01",
+      "eval_end": "2026-08-17",
+      "gem_proxy_start": "2016-07-22"
+    },
+    "v3_基础风控": {
+      "lock_days": 3,
+      "consecutive_sig_days": 2,
+      "clean_days_needed": 10,
+      "bull_sig_trigger": 2,
+      "drawdown_stop_pct": 15.0,
+      "momentum_low_window": 60,
+      "momentum_threshold": 10.0,
+      "adaptive_window": 500,
+      "adaptive_min_periods": 126,
+      "adaptive_percentile": 80,
+      "amp_floor": 3.0,
+      "vol20_floor": 25.0,
+      "vol60_floor": 25.0,
+      "bull_vol20_50_cross": 28.0
+    },
+    "v5_配对轮动": {
+      "pair_ret_window": 20,
+      "pair_z_window": 60,
+      "pair_z_entry": 1.0,
+      "pair_z_exit": 0.3,
+      "pair_corr_min": 0.7,
+      "pair_consecutive": 2,
+      "slope_window": 20,
+      "slope_threshold": 0.5,
+      "side_dd_stop_pct": 15.0
+    },
+    "v6_宏观评分": {
+      "macro_pmi_bull": 51.0,
+      "macro_pmi_bear": 49.0,
+      "macro_cpi_bull": 2.0,
+      "macro_cpi_bear": 3.0,
+      "macro_ppi_bull": 1.0,
+      "macro_ppi_bear": -2.0,
+      "macro_m2_bull": 11.0,
+      "macro_m2_bear": 8.0,
+      "macro_shibor_window": 63,
+      "macro_shibor_threshold": 0.15,
+      "macro_score_bull": 2,
+      "macro_score_bear": -2
+    },
+    "v7_风格选择": {
+      "style_mom_window": 20
+    },
+    "v10_优化开关": {
+      "level": "base",
+      "opt_1_defense_timeout": false,
+      "opt_2_regime_confirm": false,
+      "opt_3_tiered_defense": false,
+      "opt_4_trailing_stop": false,
+      "max_defense_days": 30,
+      "regime_confirm_days": 3,
+      "tiered_ratio": 0.5,
+      "trailing_stop_pct": 8.0
+    },
+    "etf_pool": [
+      "159949.SZ 创业板50ETF(成长主线)",
+      "510300.SH 沪深300ETF(大盘均衡)",
+      "510050.SH 上证50ETF(大盘价值/防守)",
+      "510880.SH 红利ETF(防御价值)",
+      "159915.SZ 创业板ETF(震荡配对/早期代理)"
+    ]
+  },
+  "daily_snapshot": {
+    "as_of": "2026-08-14",
+    "generated_at": "2026-08-17 09:12:00",
+    "fused_regime": "bull",
+    "regime_cn": "牛市",
+    "recommended_action": "持有 / 逢调仓维持 创业板50ETF(成长主线)",
+    "leader_style": "红利",
+    "gem": {
+      "date": "2026-08-14",
+      "close": 1.71,
+      "ma200": 1.6573,
+      "slope_pct": 1.181,
+      "ret20_pct": 4.27,
+      "ret60_pct": -7.07,
+      "ann_vol_pct": 54.25,
+      "above_ma200": true
+    },
+    "macro_score": 1,
+    "macro_regime": "neutral",
+    "macro_detail": {
+      "pmi": 50.3,
+      "cpi": 1.2,
+      "ppi": -0.9,
+      "m2": 8.6,
+      "shibor_1y": 1.4739,
+      "shibor_delta": -0.0366
+    }
+  }
+}
